@@ -1,5 +1,6 @@
 # AI 음성 드론_RPI3 (On-Device AI Autonomous Drone Control System)
 > 제한된 에지 컴퓨팅 자원(1GB RAM) 및 EXAONE 32B INT4 양자화 모델 기반 무인 항공기(UAV) 자율 비행 제어 아키텍처
+> [![DOI](https://zenodo.org/badge/1251944084.svg)](https://doi.org/10.5281/zenodo.20430899)
 
 본 저장소는 거대 언어 모델(LLM)의 자연어 처리 및 인지 능력을 무인 항공기(UAV)의 물리적 기동 제어와 통합한 '임베디드 AI(Embodied AI)' 실증 연구 프로젝트입니다. 대규모 클라우드 인프라에 의존하지 않고, 가용 메모리가 1GB에 불과한 에지 컴퓨팅(Edge Computing) 환경 내에서 시스템을 독립적으로 구동시키는 '온디바이스(On-Device)' 아키텍처 구현을 목표로 설계되었습니다.
 
