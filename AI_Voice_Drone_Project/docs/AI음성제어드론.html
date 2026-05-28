@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On-Device AI Autonomous Drone Architecture</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Modern Silicon Valley Dark Theme */
+        :root {
+            --bg-color: #050505;
+            --surface-color: #111111;
+            --surface-light: #1a1a1a;
+            --primary: #2563eb;
+            --accent: #38bdf8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8; 
+            --border-color: #262626;
+            --font-main: 'Inter', 'Noto Sans KR', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 10px;
+            gap: 60px;
+            overflow-x: hidden;
+        }
+
+        /* Slide Container */
+        .slide {
+            width: 1280px;
+            height: 720px;
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.9);
+            overflow: hidden; 
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 40px; 
+            border: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .slide:hover { border-color: rgba(56, 189, 248, 0.3); }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            z-index: 1;
+        }
+        .header h2 { font-size: 45px; font-weight: 900; color: var(--text-main); letter-spacing: -1px; }
+        .slide-num { color: var(--text-muted); font-size: 32px; font-weight: 800; font-family: var(--font-code); }
+
+        /* Content Layout */
+        .content { display: flex; gap: 20px; flex-grow: 1; z-index: 1; height: calc(100% - 70px); }
+        .col { flex: 1; display: flex; flex-direction: column; gap: 15px; min-height: 0; }
+        
+        /* Interactive Cards - 강제 스크롤 방지 및 정렬 최적화 */
+        .card {
+            background: var(--surface-light);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px 30px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 여백 제거를 위한 중앙 정렬 */
+            height: 100%;
+            overflow: hidden !important; /* 스크롤 절대 금지 */
+        }
+
+        .card h3 { font-weight: 900; color: var(--text-main); margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+        .card p, .card li { color: var(--text-muted); line-height: 1.6; font-weight: 600; word-break: keep-all; }
+        .card ul { padding-left: 30px; margin-top: 10px; }
+        .card li { margin-bottom: 20px; }
+
+        /* Title Slide Special */
+        .title-slide { justify-content: center; align-items: center; text-align: center; background: radial-gradient(circle at center, #111827 0%, #050505 100%); }
+        .title-slide h1 { font-size: 83px; font-weight: 900; margin: 20px 0; letter-spacing: -1.5px; color: #fff; text-shadow: 0 0 30px rgba(37, 99, 235, 0.4); line-height: 1.2; }
+        .title-slide .subtitle { font-size: 36px; font-weight: 600; color: var(--text-muted); margin-bottom: 40px; line-height: 1.5; }
+        .title-slide .meta { display: flex; gap: 60px; border-top: 2px solid var(--border-color); padding-top: 40px; }
+        .meta-item { display: flex; flex-direction: column; align-items: center; }
+        .meta-item span { font-size: 23px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .meta-item strong { font-size: 36px; font-weight: 800; color: var(--text-main); }
+
+        /* Tech Badges */
+        .badge { background: rgba(37, 99, 235, 0.1); color: var(--accent); padding: 8px 16px; border-radius: 8px; font-weight: 800; border: 2px solid rgba(37, 99, 235, 0.3); display: inline-block; margin-bottom: 8px; font-family: var(--font-code); }
+        .badge.edge { color: var(--danger); background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+        .badge.hub { color: var(--success); background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
+        
+        .highlight-text { color: var(--accent); font-weight: 900; }
+
+        /* Code Block */
+        .code-block { background: #000; border: 2px solid #333; border-radius: 10px; padding: 20px; font-family: var(--font-code); color: #e2e8f0; white-space: pre-wrap; line-height: 1.6; margin-top: 15px; }
+        .code-comment { color: #64748b; }
+
+        /* Pipeline Block Design */
+        .flow-container { display: flex; flex-direction: column; gap: 15px; height: 100%; justify-content: space-between; padding: 5px; }
+        .flow-box { background: #0a0a0a; border: 2px solid var(--border-color); border-radius: 12px; padding: 20px 25px; display: flex; align-items: center; gap: 25px; position: relative; }
+        .flow-box.rpi { border-left: 8px solid var(--danger); }
+        .flow-box.px4 { border-left: 8px solid var(--primary); }
+        .flow-box.qgc { border-left: 8px solid var(--success); }
+        
+        .flow-icon { font-size: 50px; color: var(--text-main); width: 60px; text-align: center; }
+        .flow-text { flex: 1; }
+        .flow-text h4 { font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .flow-text p { color: var(--text-muted); line-height: 1.4; margin: 0; word-break: keep-all; }
+        
+        .flow-arrow-vertical { text-align: center; color: var(--accent); display: flex; flex-direction: column; align-items: center; margin: 0;}
+        .flow-arrow-label { font-weight: 800; font-family: var(--font-code); background: var(--surface-light); padding: 8px 18px; border-radius: 12px; border: 1px solid #333; margin-bottom: 5px;}
+
+        /* Image/Video Box */
+        .media-box { background: #000; border: 2px solid var(--border-color); border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: relative; }
+        .media-box img { width: 100%; height: 100%; object-fit: contain; }
+        
+        /* Animation Classes */
+        .step-item { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+        .step-item.active { opacity: 1; transform: translateY(0); }
+        .click-hint { position: absolute; bottom: 20px; right: 30px; font-size: 26px; font-weight: 700; color: #facc15; animation: pulse 1.5s infinite; pointer-events: none; z-index: 100; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* Animation Canvas */
+        #animation-canvas { width: 100%; height: 100%; background: #050505; border-radius: 8px; position: relative; overflow: hidden; border: 1px solid #333; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<div class="slide title-slide">
+    <div style="color: var(--primary); font-weight: 800; letter-spacing: 3px; font-size: 28px; text-transform: uppercase;">Robotics & Autonomous Systems Architecture</div>
+    <h1>온디바이스 AI 기반<br>자율 비행 드론 제어 시스템</h1>
+    <div class="subtitle">EXAONE-4.0-32B 거대 언어 모델 및 분산 아키텍처 기반 3D 비행 통제<br><span style="font-size: 28px; color: var(--text-muted); font-family: var(--font-code); margin-top: 15px; display: inline-block;">PX4 Autopilot | ROS 2 Humble | Gazebo SITL | MicroXRCE-DDS</span></div>
+    
+    <div class="meta">
+        <div class="meta-item step-item"><span>Architect & Lead Developer</span><strong>j2w</strong></div>
+        <div class="meta-item step-item"><span>System Revision</span><strong>프로토타입 2 (Distributed MC)</strong></div>
+        <div class="meta-item step-item"><span>Validation Phase</span><strong>SITL Simulation Completed</strong></div>
+    </div>
+</div>
+
+<!-- Slide 2: 01. 목차 (블록 내 완벽 수납을 위한 사이즈/간격 초정밀 조정) -->
+<div class="slide">
+    <div class="header"><h2>01. 목차 (Table of Contents)</h2><span class="slide-num">01/11</span></div>
+    <div class="content">
+        <div class="card step-item" style="width: 100%; justify-content: center; padding: 15px 60px;">
+            <ul style="list-style: none; font-size: 30px; line-height: 1.55; padding: 0; margin: 0; font-weight: 800;">
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">01.</span> 아키텍처 진화 (프로토타입 1 → 2)</li>
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">02.</span> 비행 통제 시스템 통신 흐름도</li>
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">03.</span> EXAONE 32B 경량화 및 RAG 구축</li>
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">04.</span> 훈련 데이터 증강 및 파인튜닝</li>
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">05.</span> 3차원 비행 역학 제어 알고리즘</li>
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">06.</span> 통합 제어 시스템 아키텍처 도면</li>
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">07.</span> 분산 아키텍처 데이터 흐름 분석</li>
+                <li class="step-item" style="margin-bottom:6px;"><span class="highlight-text" style="margin-right: 20px;">08.</span> 통합 관제(GCS) 실증 화면</li>
+                <li class="step-item" style="margin-bottom:0;"><span class="highlight-text" style="margin-right: 20px;">09.</span> 결론 및 프로토타입 3 로드맵</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 3: Architecture Evolution - 여백 최적화 및 핵심 요약 -->
+<div class="slide">
+    <div class="header"><h2>02. 단일 노드 한계 극복 및 에지 자원 최적화</h2><span class="slide-num">02/10</span></div>
+    <div class="content">
+        <div class="col" style="flex: 1;">
+            <div class="card step-item">
+                <h3 style="font-size: 34px;"><i class="fa-solid fa-microchip"></i> 1GB RAM의 물리적 한계</h3>
+                <p style="font-size: 26px;">통합 연산 시 메모리 초과(OOM) 및 제어 지연 발생.</p>
+                <div class="code-block step-item" style="font-size: 22px;">
+<span class="code-comment"># 에지 디바이스 빌드 최적화</span>
+$ ninja -j 1  <span class="code-comment"># 단일 코어 병렬 제한</span>
+gpu_mem=128   <span class="code-comment"># VRAM 최소화</span>
+                </div>
+            </div>
+        </div>
+        <div class="col" style="flex: 1.2;">
+            <div class="card step-item">
+                <h3 style="font-size: 34px;"><i class="fa-solid fa-network-wired"></i> 초저지연 분산 제어 아키텍처</h3>
+                <p style="font-size: 26px;">기능별 노드 분리를 통한 실시간성 확보.</p>
+                <ul style="font-size: 24px;">
+                    <li class="step-item"><span class="badge hub" style="font-size: 22px;">지상 관제국(GCS)</span> 고부하 자연어 처리(STT) 전담.</li>
+                    <li class="step-item"><span class="badge edge" style="font-size: 22px;">임무 컴퓨터(RPi3)</span> 비행 제어 및 텔레메트리 집중.</li>
+                    <li class="step-item"><span class="badge" style="font-size: 22px;">Chrony NTP 동기화</span> 통신 지연 및 메시지 누락 원천 차단.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 4: CORE COMMUNICATION ARCHITECTURE -->
+<div class="slide">
+    <div class="header"><h2>03. 비행 통제 시스템 통신 흐름도</h2><span class="slide-num">03/10</span></div>
+    <div class="content">
+        <div class="col" style="flex: 1.3;">
+            <div class="card step-item">
+                <h3 style="font-size: 26px; margin-bottom: 5px;"><i class="fa-solid fa-tower-broadcast"></i> 노드 간 통신 파이프라인</h3>
+                <div class="flow-container" style="justify-content: center; gap: 8px;">
+                    <div class="flow-box rpi step-item" style="padding: 12px 18px;">
+                        <i class="fa-brands fa-raspberry-pi flow-icon" style="color: #ef4444; font-size: 38px; width: 45px;"></i>
+                        <div class="flow-text">
+                            <h4 style="font-size: 22px; margin-bottom: 2px;">1. 임무 컴퓨터 (RPi3)</h4>
+                            <p style="font-size: 17px;">제어 명령 수신 및 ROS 2 토픽 발행.</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow-vertical step-item" style="margin: 0;">
+                        <span class="flow-arrow-label" style="font-size: 15px; padding: 4px 12px; margin-bottom: 2px;">MicroXRCE-DDS (실시간 번역)</span>
+                        <i class="fa-solid fa-arrow-down" style="font-size: 20px;"></i>
+                    </div>
+                    <div class="flow-box px4 step-item" style="padding: 12px 18px;">
+                        <i class="fa-solid fa-plane flow-icon" style="color: #2563eb; font-size: 38px; width: 45px;"></i>
+                        <div class="flow-text">
+                            <h4 style="font-size: 22px; margin-bottom: 2px;">2. 비행 제어기 (PX4)</h4>
+                            <p style="font-size: 17px;">uORB 규격 메시지 수신 및 모터 기동.</p>
+                        </div>
+                    </div>
+                    <div class="flow-arrow-vertical step-item" style="margin: 0;">
+                        <span class="flow-arrow-label" style="font-size: 15px; padding: 4px 12px; margin-bottom: 2px;">MAVLink Bridge (상태 보고)</span>
+                        <i class="fa-solid fa-arrow-down" style="font-size: 20px;"></i>
+                    </div>
+                    <div class="flow-box qgc step-item" style="padding: 12px 18px;">
+                        <i class="fa-solid fa-desktop flow-icon" style="color: #10b981; font-size: 38px; width: 45px;"></i>
+                        <div class="flow-text">
+                            <h4 style="font-size: 22px; margin-bottom: 2px;">3. 지상 관제 소프트웨어 (QGC)</h4>
+                            <p style="font-size: 17px;">비행 텔레메트리 궤적 시각화 모니터링.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                <div class="col" style="flex: 1;">
+            <div class="card step-item">
+                <h3 style="font-size: 32px;"><i class="fa-solid fa-code-compare"></i> 통신망 핵심 요약</h3>
+                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 25px; margin-top: 10px; margin-bottom: 25px;">
+                    <h4 style="color: var(--warning); margin-bottom: 10px; font-size: 28px;">💡 MicroXRCE-DDS</h4>
+                    <p style="font-size: 22px;">ROS 2와 PX4 간의 지연 없는 초고속 명령 하달용 미들웨어 브릿지.</p>
+                </div>
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 25px;">
+                    <h4 style="color: var(--success); margin-bottom: 10px; font-size: 28px;">💡 MAVLink Bridge</h4>
+                    <p style="font-size: 22px;">드론의 센서 및 궤적 상태를 관제소에 송신하는 실시간 보고 체계.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 5: AI & Large Language Model -->
+<div class="slide">
+    <div class="header"><h2>04. 초거대 LLM 경량화 및 RAG 구축</h2><span class="slide-num">04/10</span></div>
+    <div class="content">
+        <div class="col">
+            <div class="card step-item">
+                <h3 style="font-size: 38px;"><i class="fa-solid fa-brain"></i> EXAONE 32B 최적화 및 제어 변환</h3>
+                <p style="font-size: 28px;">비정형 음성을 정형화된 군사 규격 제어 파라미터로 정밀 디코딩합니다.</p>
+                <ul style="font-size: 26px; margin-top: 20px;">
+                    <li class="step-item"><strong>INT4 양자화 (Q4_K_M):</strong> 단일 GPU(RTX 4070) 한계 극복을 위한 4-bit 초경량 압축.</li>
+                    <li class="step-item"><strong>Jinja2 몽키 패치(Monkey Patch):</strong> 런타임 환경 강제 수정을 통한 템플릿 에러 차단.</li>
+                    <li class="step-item"><strong>도메인 특화 RAG (지식 주입):</strong> 할루시네이션(환각) 억제 및 정확한 기계어 매핑 보장.</li>
+                </ul>
+                <div class="code-block step-item" style="font-size: 24px;">
+<span class="code-comment"># 발음 훼손 자동 교정 파이프라인 적용</span>
+if "26해" in text: text = text.replace("26해", "이륙해")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 6: Massive Training and Data Augmentation -->
+<div class="slide">
+    <div class="header"><h2>05. 데이터 증강 및 QLoRA 파인튜닝</h2><span class="slide-num">05/10</span></div>
+    <div class="content">
+        <div class="col" style="flex: 1.2;">
+            <div class="card step-item">
+                <h3 style="font-size: 34px;"><i class="fa-solid fa-database"></i> 1,500만 자 규모 훈련 교본 구축</h3>
+                <p style="font-size: 25px;">야외 전장 노이즈를 모사한 <strong>발음 파괴 알고리즘</strong> 적용으로 강건한 데이터 증강.</p>
+                <div class="code-block step-item" style="font-size: 22px;">
+<span class="code-comment"># 실환경 노이즈 모사 (70% 적용 확률)</span>
+replacements = { '착륙': ['창륙', '장육', '창뉵'] }
+                </div>
+            </div>
+        </div>
+        <div class="col" style="flex: 1;">
+            <div class="card step-item">
+                <h3 style="font-size: 34px;"><i class="fa-solid fa-bolt"></i> QLoRA 기반 미세조정</h3>
+                <p style="font-size: 25px;">12GB VRAM 한계 돌파를 위한 최적화.</p>
+                <ul style="font-size: 24px; margin-top: 15px;">
+                    <li class="step-item"><strong>4-bit 저정밀도 훈련:</strong> 핵심 어댑터(Adapter) 가중치만 선별적 타겟팅 학습.</li>
+                    <li class="step-item"><strong>Loss 모니터링:</strong> 실시간 손실 함수 추적 및 과적합(Overfitting) 원천 방어.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 7: Flight Control Algorithm -->
+<div class="slide">
+    <div class="header"><h2>06. 3차원 비행 역학 제어 알고리즘</h2><span class="slide-num">06/10</span></div>
+    <div class="content">
+        <div class="col">
+            <div class="card step-item">
+                <h3 style="font-size: 38px;"><i class="fa-solid fa-plane-departure"></i> 정밀 좌표 기동 (NED 프레임 시스템)</h3>
+                <p style="font-size: 28px;">지향각(Yaw)과 피치(Pitch) 역산을 통한 로컬 3D 목표 좌표(Waypoint) 동적 생성.</p>
+                <div class="code-block step-item" style="font-size: 25px; margin-top: 25px;">
+<span class="code-comment"># NED(North, East, Down) 좌표계 기준 변환 연산</span>
+self.target_x += xy_dist * math.cos(self.commanded_yaw)   <span class="code-comment"># North 연산</span>
+self.target_y += xy_dist * math.sin(self.commanded_yaw)   <span class="code-comment"># East 연산</span>
+self.target_z -= z_dist                                   <span class="code-comment"># Z축 보정</span>
+                </div>
+                <ul class="step-item" style="font-size: 26px; margin-top: 25px;">
+                    <li><strong>절대 고도 기준점 (Absolute Altitude Anchor):</strong> 누적 오차로 인한 비행 중 고도 하강(Drift) 현상을 이륙 고도 고정으로 완벽히 차단.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 8: Architecture Diagram -->
+<div class="slide">
+    <div class="header"><h2>07. 통합 제어 시스템 아키텍처 도면</h2><span class="slide-num">07/10</span></div>
+    <div class="content">
+        <div class="card step-item" style="padding: 10px; width: 100%; border: 3px solid var(--primary);">
+            <div class="media-box" style="height: 100%; border: none;">
+                <img src="./온디바이스기반자율비행제어시스템통합아키텍처.png" alt="시스템 통합 아키텍처 도면" onerror="this.src='https://placehold.co/1280x720/111111/38bdf8?text=Architecture+Diagram'; this.onerror=null;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 9: Architecture Explanation -->
+<div class="slide">
+    <div class="header"><h2>08. 분산 아키텍처 데이터 흐름 분석</h2><span class="slide-num">08/10</span></div>
+    <div class="content">
+        <div class="col">
+            <div class="card step-item">
+                <h3 style="font-size: 38px;"><i class="fa-solid fa-diagram-project"></i> 3-Node 분산 파이프라인 처리 구조</h3>
+                <p style="font-size: 28px; margin-bottom: 30px;">통신 병목을 제거한 기능별 유기적 협업 사이클입니다.</p>
+                <ul style="font-size: 28px;">
+                    <li class="step-item" style="margin-bottom: 35px;">
+                        <strong style="color: var(--accent);"><i class="fa-solid fa-server"></i> 1. 관제국 (GCS):</strong> 자연어 입력 ➡️ STT ➡️ EXAONE 기반 제어 매핑.
+                    </li>
+                    <li class="step-item" style="margin-bottom: 35px;">
+                        <strong style="color: var(--warning);"><i class="fa-solid fa-bridge"></i> 2. 통신 브릿지:</strong> ROS 2 명령 ➡️ XRCE-DDS 통한 uORB 직렬화 변환.
+                    </li>
+                    <li class="step-item">
+                        <strong style="color: var(--success);"><i class="fa-solid fa-microchip"></i> 3. 에지 노드:</strong> 3D 목표 궤적 생성 ➡️ 물리 엔진 기동 ➡️ MAVLink 피드백.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 10: Real System Validation (SITL) -->
+<div class="slide">
+    <div class="header"><h2>09. 시스템 통합 관제(GCS) 실증 화면</h2><span class="slide-num">09/10</span></div>
+    <div class="content">
+        <div class="col" style="flex: 1.3;">
+            <div class="card step-item" style="padding: 10px;">
+                <div class="media-box" style="height: 100%; border: 3px solid var(--success);">
+                    <img src="./드론시뮬_라즈베리파이3_EXAONE.jpg" alt="실증 화면" onerror="this.src='https://placehold.co/1280x720/111111/10b981?text=GCS+Validation+Screen'; this.onerror=null;">
+                </div>
+            </div>
+        </div>
+        <div class="col" style="flex: 1;">
+            <div class="card step-item">
+                <h3 style="font-size: 30px;"><i class="fa-solid fa-desktop"></i> 실시간 비행 검증 및 모니터링</h3>
+                <ul style="font-size: 24px; margin-top: 10px;">
+                    <li class="step-item"><strong>터미널 관제:</strong> EXAONE 거대 모델의 명령어 디코딩 로그 실시간 추적.</li>
+                    <li class="step-item"><strong>역학 검증:</strong> 설정 궤적과 3D 물리 엔진 동작 간 역학적 일치성 완벽 입증.</li>
+                    <li class="step-item"><strong>저지연 스트리밍:</strong> TCP/IP 기반 최적화 전송.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slide 11: Conclusion & Roadmap -->
+<div class="slide" id="slide-final">
+    <div class="header"><h2>10. 결론 및 향후 실증 로드맵 (프로토타입 3)</h2><span class="slide-num">10/10</span></div>
+    <div class="content">
+        <div class="col" style="flex: 1.2;">
+            <div class="card step-item">
+                <h3 style="font-size: 34px;"><i class="fa-solid fa-flag-checkered"></i> 프로젝트 성과 요약</h3>
+                <p style="font-size: 25px;">1GB RAM 환경 내에서 32B 거대 모델 기반 <strong>온디바이스 자율 비행 파이프라인</strong> 실증 성공.</p>
+                <ul style="font-size: 24px; margin-top: 15px; margin-bottom: 25px;">
+                    <li class="step-item">노드 분리를 통한 초저지연 반응 속도(0.01초) 확보.</li>
+                    <li class="step-item">이기종 통신망(ROS2-PX4) 데이터 무결성 검증 완료.</li>
+                </ul>
+                <h3 class="step-item" style="font-size: 34px;"><i class="fa-solid fa-rocket"></i> 프로토타입 3 하드웨어 도입</h3>
+                <ul class="step-item" style="font-size: 24px; margin-top: 15px;">
+                    <li>제어 파이썬 스크립트를 <strong>실제 멀티콥터(F450) 기체 이식</strong> 및 야외 성능 테스트 돌입 예정.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col" style="flex: 1;">
+            <!-- Animation Box -->
+            <div class="card step-item" style="padding: 0; overflow: hidden !important; border: 3px solid var(--primary);">
+                <div id="animation-canvas">
+                    <div style="position:absolute; width:100%; text-align:center; top:20px; font-weight:800; color:var(--text-muted); font-size:26px; z-index:10; pointer-events: none;">[ 3D Trajectory Simulation ]</div>
+                    
+                    <div style="position:absolute; width:160px; height:160px; border:4px dashed var(--success); border-radius:50%; top:200px; right:60px; display:flex; align-items:center; justify-content:center; color:var(--success); font-weight:900; font-size: 23px; background: rgba(16,185,129,0.15); pointer-events: none;">Target<br>[Z: -1.5m]</div>
+                    
+                    <div style="position:absolute; width:100%; height:6px; background:#333; bottom:50px; pointer-events: none;"></div>
+                    
+                    <div id="ani-robot" style="position:absolute; width:100px; height:60px; background:var(--accent); border-radius:10px; bottom:56px; left:40px; z-index:2; display:flex; align-items:center; justify-content:center; font-size: 20px; font-weight:900; color:#000; box-shadow: 0 0 25px var(--accent); pointer-events: none; text-align: center; line-height: 1.2;">UAV<br>System</div>
+                    
+                    <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
+                        <path d="M 90 640 L 90 480 L 320 270" fill="transparent" stroke="rgba(56, 189, 248, 0.4)" stroke-width="6" stroke-dasharray="10,10"/>
+                    </svg>
+
+                    <div style="position:absolute; bottom:15px; left:20px; font-size:20px; color:var(--text-muted); pointer-events: none; font-weight: 800;">
+                        ※ UAV: Unmanned Aerial Vehicle
+                    </div>
+                    <div style="position:absolute; bottom:15px; right:20px; font-size:20px; color:#facc15; font-weight: 900; cursor:pointer; pointer-events: none;">
+                        <i class="fa-solid fa-rotate-right"></i> 화면 클릭 시 재동작
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let robotAniFrame = null;
+    let isAnimating = false;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.slide').forEach(slide => {
+            const steps = slide.querySelectorAll('.step-item');
+            if (steps.length > 0) {
+                const hint = document.createElement('div');
+                hint.className = 'click-hint';
+                hint.innerHTML = '클릭하여 다음 전개 <i class="fa-solid fa-chevron-right" style="margin-left: 5px;"></i>';
+                slide.appendChild(hint);
+
+                let currentStep = 0;
+                
+                slide.addEventListener('click', (e) => {
+                    if(e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+
+                    if (currentStep < steps.length) {
+                        steps[currentStep].classList.add('active');
+                        
+                        if (slide.id === 'slide-final' && !isAnimating) {
+                            startRobotAnimation();
+                        }
+                        currentStep++;
+                    }
+                    
+                    if (currentStep >= steps.length) {
+                        hint.style.display = 'none';
+                    }
+                });
+            }
+        });
+
+        const canvas = document.getElementById('animation-canvas');
+        if (canvas) {
+            canvas.addEventListener('click', function(e) {
+                e.stopPropagation(); 
+                isAnimating = false;
+                startRobotAnimation();
+            });
+        }
+    });
+
+    function startRobotAnimation() {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        const robot = document.getElementById('ani-robot');
+        let aniX = 40;
+        let aniY = 56;
+        let phase = 0; 
+        
+        robot.style.bottom = aniY + 'px';
+        robot.style.left = aniX + 'px';
+
+        if (robotAniFrame) {
+            cancelAnimationFrame(robotAniFrame);
+        }
+
+        function animate() {
+            if (phase === 0) {
+                aniY += 1.5; 
+                if (aniY > 230) phase = 1; 
+            } else if (phase === 1) {
+                aniX += 1.4; 
+                aniY += 0.7; 
+                if (aniX > 280) phase = 2; 
+            } else if (phase === 2) {
+                aniY += Math.sin(Date.now() / 150) * 0.5;
+            }
+            
+            robot.style.bottom = aniY + 'px';
+            robot.style.left = aniX + 'px';
+            
+            robotAniFrame = requestAnimationFrame(animate);
+        }
+        animate();
+    }
+</script>
+
+</body>
+</html>
